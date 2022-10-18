@@ -9,6 +9,7 @@ using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
 using MinimalApi.Endpoint;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.eShopWeb.PublicApi.CatalogItemEndpoints;
 
@@ -20,11 +21,13 @@ public class CatalogItemListPagedEndpoint : IEndpoint<IResult, ListPagedCatalogI
     private IRepository<CatalogItem> _itemRepository;
     private readonly IUriComposer _uriComposer;
     private readonly IMapper _mapper;
+    private ILogger<CatalogItemListPagedEndpoint> _logger;
 
-    public CatalogItemListPagedEndpoint(IUriComposer uriComposer, IMapper mapper)
+    public CatalogItemListPagedEndpoint(IUriComposer uriComposer, IMapper mapper, ILogger<CatalogItemListPagedEndpoint> logger)
     {
         _uriComposer = uriComposer;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public void AddRoute(IEndpointRouteBuilder app)
@@ -34,13 +37,15 @@ public class CatalogItemListPagedEndpoint : IEndpoint<IResult, ListPagedCatalogI
             {
                 _itemRepository = itemRepository;
                 return await HandleAsync(new ListPagedCatalogItemRequest(pageSize, pageIndex, catalogBrandId, catalogTypeId));
-            })            
+            })
             .Produces<ListPagedCatalogItemResponse>()
             .WithTags("CatalogItemEndpoints");
     }
 
     public async Task<IResult> HandleAsync(ListPagedCatalogItemRequest request)
     {
+        //throw new Exception("Cannot move further");
+        //Convert.ToInt32("123s");
         var response = new ListPagedCatalogItemResponse(request.CorrelationId());
 
         var filterSpec = new CatalogFilterSpecification(request.CatalogBrandId, request.CatalogTypeId);
@@ -55,6 +60,13 @@ public class CatalogItemListPagedEndpoint : IEndpoint<IResult, ListPagedCatalogI
         var items = await _itemRepository.ListAsync(pagedSpec);
 
         response.CatalogItems.AddRange(items.Select(_mapper.Map<CatalogItemDto>));
+
+        _logger.LogInformation("Number of items loaded from database is {Response.CatalogItems.Count}",
+            response.CatalogItems.Count);
+
+        //throw new Exception("Cannot move further");
+
+
         foreach (CatalogItemDto item in response.CatalogItems)
         {
             item.PictureUri = _uriComposer.ComposePicUri(item.PictureUri);
