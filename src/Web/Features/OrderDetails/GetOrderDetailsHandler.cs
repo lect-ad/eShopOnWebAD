@@ -36,6 +36,8 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
         var httpClient = new HttpClient();
 
         var httpResponse = await httpClient.PostAsync("https://order-item-reserver-task4.azurewebsites.net/api/OrderItemsReserver?clientId=blobs_extension", httpContent);
+        //var httpResponse = await httpClient.PostAsync("https://order-python-task4.azurewebsites.net/api/pythonHttpTrigger1" +
+        //    "?code=OD125xJdRWsb4OrBAxbXpgcTpk-iqKtRDrNQkr_jThneAzFu8KsfMA==", httpContent);
 
         if (httpResponse.Content != null)
         {
