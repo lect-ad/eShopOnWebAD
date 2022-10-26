@@ -35,13 +35,21 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
         var httpContent = new StringContent(json_string, System.Text.Encoding.UTF8, "application/json");
         var httpClient = new HttpClient();
 
-        var httpResponse = await httpClient.PostAsync("https://order-item-reserver-task4.azurewebsites.net/api/OrderItemsReserver?clientId=blobs_extension", httpContent);
+        var httpResponseBlob = await httpClient.PostAsync("https://order-item-reserver-task4.azurewebsites.net/api/OrderItemsReserver?clientId=blobs_extension", httpContent);
+        //Python function
         //var httpResponse = await httpClient.PostAsync("https://order-python-task4.azurewebsites.net/api/pythonHttpTrigger1" +
         //    "?code=OD125xJdRWsb4OrBAxbXpgcTpk-iqKtRDrNQkr_jThneAzFu8KsfMA==", httpContent);
 
-        if (httpResponse.Content != null)
+        if (httpResponseBlob.Content != null)
         {
-            var responseContent = await httpResponse.Content.ReadAsStringAsync();
+            var responseContentBlob = await httpResponseBlob.Content.ReadAsStringAsync();
+        }
+
+        var httpResponseCosmos = await httpClient.PostAsync("https://delivery-func-task5.azurewebsites.net/api/DeliveryOrderProcessor", httpContent);
+
+        if (httpResponseCosmos.Content != null)
+        {
+            var responseContentCosmos = await httpResponseCosmos.Content.ReadAsStringAsync();
         }
 
         return new OrderViewModel
