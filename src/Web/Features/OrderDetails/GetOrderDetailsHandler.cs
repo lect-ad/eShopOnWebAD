@@ -1,22 +1,29 @@
-﻿using System.Linq;
+﻿using System;
+using System.Configuration;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using MediatR;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
 using Microsoft.eShopWeb.Web.ViewModels;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.eShopWeb.Web.Features.OrderDetails;
 
 public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderViewModel>
 {
     private readonly IReadRepository<Order> _orderRepository;
+    const string TopicName = "newordercreated";
+    private IConfiguration _configuration;
 
-    public GetOrderDetailsHandler(IReadRepository<Order> orderRepository)
+    public GetOrderDetailsHandler(IReadRepository<Order> orderRepository, IConfiguration configuration)
     {
         _orderRepository = orderRepository;
+        _configuration = configuration;
     }
 
     public async Task<OrderViewModel> Handle(GetOrderDetails request,
@@ -31,26 +38,10 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
         }
 
         var json_string = order.ToJson();
-
-        var httpContent = new StringContent(json_string, System.Text.Encoding.UTF8, "application/json");
-        var httpClient = new HttpClient();
-
-        var httpResponseBlob = await httpClient.PostAsync("https://order-item-reserver-task4.azurewebsites.net/api/OrderItemsReserver?clientId=blobs_extension", httpContent);
-        //Python function
-        //var httpResponse = await httpClient.PostAsync("https://order-python-task4.azurewebsites.net/api/pythonHttpTrigger1" +
-        //    "?code=OD125xJdRWsb4OrBAxbXpgcTpk-iqKtRDrNQkr_jThneAzFu8KsfMA==", httpContent);
-
-        if (httpResponseBlob.Content != null)
-        {
-            var responseContentBlob = await httpResponseBlob.Content.ReadAsStringAsync();
-        }
-
-        var httpResponseCosmos = await httpClient.PostAsync("https://delivery-func-task5.azurewebsites.net/api/DeliveryOrderProcessor", httpContent);
-
-        if (httpResponseCosmos.Content != null)
-        {
-            var responseContentCosmos = await httpResponseCosmos.Content.ReadAsStringAsync();
-        }
+        
+        Console.WriteLine("Sending a message to the NewOrderCreated topic...");
+        SendOrderMessageAsync(json_string).GetAwaiter().GetResult();
+        Console.WriteLine("Message was sent successfully.");
 
         return new OrderViewModel
         {
@@ -67,5 +58,25 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
             ShippingAddress = order.ShipToAddress,
             Total = order.Total()
         };
+    }
+
+    async Task SendOrderMessageAsync(string messageBody)
+    {
+        string ServiceBusConnectionString = _configuration.GetConnectionString("ServiceBusConnection");
+        //Console.WriteLine($"constring: {ServiceBusConnectionString}");
+        await using var client = new ServiceBusClient(ServiceBusConnectionString);
+
+        await using ServiceBusSender sender = client.CreateSender(TopicName);
+
+        try
+        {
+            var message = new ServiceBusMessage(messageBody);
+            Console.WriteLine($"Sending message: {messageBody}");
+            await sender.SendMessageAsync(message);
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{DateTime.Now} :: Exception: {exception.Message}");
+        }
     }
 }
