@@ -39,7 +39,7 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
 
         var json_string = order.ToJson();
         
-        Console.WriteLine("Sending a message to the NewOrderCreated topic...");
+        Console.WriteLine($"Sending a message to the {TopicName} topic...");
         SendOrderMessageAsync(json_string).GetAwaiter().GetResult();
         Console.WriteLine("Message was sent successfully.");
 
@@ -63,7 +63,6 @@ public class GetOrderDetailsHandler : IRequestHandler<GetOrderDetails, OrderView
     async Task SendOrderMessageAsync(string messageBody)
     {
         string ServiceBusConnectionString = _configuration.GetConnectionString("ServiceBusConnection");
-        //Console.WriteLine($"constring: {ServiceBusConnectionString}");
         await using var client = new ServiceBusClient(ServiceBusConnectionString);
 
         await using ServiceBusSender sender = client.CreateSender(TopicName);
